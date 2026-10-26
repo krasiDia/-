@@ -31,13 +31,12 @@ class Matrix {
 	static const float deff;
 public:
 	Matrix() = default;
-	Matrix(int row, int col, ...): row(row), col(col) {
-		va_list list;
-		va_start(list, col);	
-		for (int i = 0; i < row*col; i++) {
-			add(arrayMatrix, va_arg(list, T));
-		}		
+	Matrix(int row, int col, std::initializer_list<T> values): row(row), col(col){
+		for (const T& value : values) {
+			add(arrayMatrix, value);
+		}
 	}
+	//????
 	Matrix(int row, int col, int top, int bottom): row(row), col(col) {
 		std::random_device r;
 		std::default_random_engine e1(r());
@@ -51,39 +50,34 @@ public:
 			add(arrayMatrix, means[i]);
 		}
 	}
-	Matrix(const Matrix& m) {
-		if (!m.arrayMatrix) {
-			this->arrayMatrix = nullptr;
-			this->row = 0;
-			this->col = 0;
-		}
-		else {
-			this->row = m.row;
-			this->col = m.col;
-
+	Matrix(const Matrix& m) : row(m.row), col(m.col) {
 			Array<T>* tmp = m.arrayMatrix;
-			while (tmp->next) {
-				add(this->arrayMatrix, tmp->value);
+			while (tmp) {
+				add(arrayMatrix, tmp->value);
 				tmp = tmp->next;
 			}
-			add(this->arrayMatrix, tmp->value);
-		}
 	}
-	bool operator==(const Matrix& m) {
-		Array<T>* tmp = m.arrayMatrix;
-		while (tmp->next) {
-			if (tmp->value != this->arrayMatrix->value) {
+	Matrix& operator=(Matrix other) {
+			std::swap(arrayMatrix, other.arrayMatrix);
+			std::swap(row, other.row);
+			std::swap(col, other.col);
+			return *this;
+	}
+
+	//???
+	bool operator==(const Matrix& m) const{
+		Array<T>* tmp = this->arrayMatrix;
+		Array<T>* tmpOther = m.arrayMatrix;
+		while (tmp && tmpOther) {
+			if (tmp->value != tmpOther->value) {
 				return false;
 			}
 			tmp = tmp->next;
-			this->arrayMatrix = this->arrayMatrix->next;
+			tmpOther = tmpOther->next;
 		}
-		if (tmp->value != this->arrayMatrix->value) {
-			return false;
-		}
-		return true;
+		return tmp == nullptr && tmpOther == nullptr;
 	}
-	bool operator!=(const Matrix& m) {
+	bool operator!=(const Matrix& m) const{
 		return !(*this == m);
 	}
 	friend std::ostream& operator<<(std::ostream& os, const Matrix& m) {
@@ -133,12 +127,11 @@ public:
 		if (this->row == other.row && this->col == other.col) {
 			Array<T>* tmp = this->arrayMatrix;
 			Array<T>* tmpOther = other.arrayMatrix;
-			while (tmp->next) {
+			while (tmp && tmpOther) {
 				tmp->value += tmpOther->value;
 				tmp = tmp->next;
 				tmpOther = tmpOther->next;
 			}
-			tmp->value += tmpOther->value;
 		}
 		else {
 			throw std::runtime_error("The matrices have different sizes.");
@@ -154,12 +147,11 @@ public:
 		if (this->row == other.row && this->col == other.col) {
 			Array<T>* tmp = this->arrayMatrix;
 			Array<T>* tmpOther = other.arrayMatrix;
-			while (tmp->next) {
+			while (tmp && tmpOther) {
 				tmp->value -= tmpOther->value;
 				tmp = tmp->next;
 				tmpOther = tmpOther->next;
 			}
-			tmp->value -= tmpOther->value;
 		}
 		else {
 			throw std::runtime_error("The matrices have different sizes.");
@@ -171,44 +163,45 @@ public:
 		return tmp;
 	}
 
-	void operator*=(T mean) {
+	void operator*=(const T& mean) {
 		Array<T>* tmp = this->arrayMatrix;
-		while (tmp->next) {
+		while (tmp) {
 			tmp->value *= mean;
 			tmp = tmp->next;
 		}
-		tmp->value *= mean;
 	}
-	friend Matrix<T> operator*(const Matrix<T>& m, T mean) {
+	friend Matrix<T> operator*(const Matrix<T>& m, const T& mean) {
 		Matrix<T> ans = m;
 		ans *= mean;
 		return ans;
 	}
-	friend Matrix<T> operator*(T mean, const Matrix<T>& m) {
+	friend Matrix<T> operator*(const T& mean, const Matrix<T>& m) {
 		Matrix<T> ans = m;
 		ans *= mean;
 		return ans;
 	}
 
-	void operator/=(T mean) {
+	void operator/=(const T& mean) {
+		if (mean == T{}) {
+			throw std::runtime_error("Division by zero.");
+		}
 		Array<T>* tmp = this->arrayMatrix;
-		while (tmp->next) {
+		while (tmp) {
 			tmp->value /= mean;
 			tmp = tmp->next;
 		}
-		tmp->value *= mean;
 	}
-	friend Matrix<T> operator/(const Matrix<T>& m, T mean) {
+	friend Matrix<T> operator/(const Matrix<T>& m, const T& mean) {
 		Matrix<T> ans = m;
 		ans /= mean;
 		return ans;
 	}
 
-	int tr() {
+	T tr() const {
 		if (this->row == this->col) {
-			int result{};
-			for (int i = 0; i < this->row * this->col; i += (this->col+1)) {
-				result += (*this)(i);
+			T result{};
+			for (int i = 0; i < this->row; ++i) {
+				result += (*this)(i,i);
 			}
 			return result;
 		}
@@ -221,7 +214,7 @@ public:
 			Matrix<T> tmp(a.row, other.col, 0, 0);
 			for (int k = 0; k < a.row; ++k) {
 				for (int i = 0; i < other.col; ++i) {
-					T result = 0;
+					T result{};
 					for (int j = 0; j < a.col; ++j) {
 						result += a(k,j) * other(j,i);
 					}
@@ -234,19 +227,166 @@ public:
 			throw std::runtime_error("The matrices are not adjacent.");
 		}
 	}
+	~Matrix() {
+		while (arrayMatrix) {
+			Array<T>* tmp = arrayMatrix;
+			arrayMatrix = arrayMatrix->next;
+			delete tmp;
+		}
+	}
 };
 
 
-const float Matrix<float>::deff = 0.000001f; //придумать как сделать частичную специализацию для оператора. в принципе как специализировать для типов с плавающей точкой 
+const float Matrix<float>::deff = 0.000001f; //придумать как сделать частичную специализацию для оператора
+
+template<typename T>
+T determinant(const Matrix<T>& A) {
+	return A(0, 0) * (A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1))
+		- A(0, 1) * (A(1, 0) * A(2, 2) - A(1, 2) * A(2, 0))
+		+ A(0, 2) * (A(1, 0) * A(2, 1) - A(1, 1) * A(2, 0));
+}
+template<typename T>
+Matrix<T> inverse(const Matrix<T>& A) {
+	T det = determinant(A);
+
+	if (std::abs(det) < 1e-6) {
+		throw std::runtime_error("Inverse matrix does not exist");
+	}
+
+	Matrix<T> result(3, 3, {
+		A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1),
+		A(0, 2) * A(2, 1) - A(0, 1) * A(2, 2),
+		A(0, 1) * A(1, 2) - A(0, 2) * A(1, 1),
+
+		A(1, 2) * A(2, 0) - A(1, 0) * A(2, 2),
+		A(0, 0) * A(2, 2) - A(0, 2) * A(2, 0),
+		A(0, 2) * A(1, 0) - A(0, 0) * A(1, 2),
+
+		A(1, 0) * A(2, 1) - A(1, 1) * A(2, 0),
+		A(0, 1) * A(2, 0) - A(0, 0) * A(2, 1),
+		A(0, 0) * A(1, 1) - A(0, 1) * A(1, 0)
+		});
+
+	return result / det;
+}
+template<typename T>
+Matrix<T> solve(const Matrix<T>& A, const Matrix<T>& b) {
+	return inverse(A) * b;
+}
+template<typename T>
+bool areCoplanar(
+	const Matrix<T>& a,
+	const Matrix<T>& b,
+	const Matrix<T>& c
+) {
+	T det =
+		a(0, 0) * (b(0, 1) * c(0, 2) - b(0, 2) * c(0, 1))
+		- a(0, 1) * (b(0, 0) * c(0, 2) - b(0, 2) * c(0, 0))
+		+ a(0, 2) * (b(0, 0) * c(0, 1) - b(0, 1) * c(0, 0));
+
+	return std::abs(det) < 1e-6;
+}
+
+template<typename T>
+std::pair<Matrix<T>, Matrix<T>> LU(const Matrix<T>& A) {
+	Matrix<T> L(3, 3, 0, 0);
+	Matrix<T> U(3, 3, 0, 0);
+
+	for (int i = 0; i < 3; ++i) {
+		L(i, i, T{ 1 });
+
+		for (int j = i; j < 3; ++j) {
+			T sum{};
+
+			for (int k = 0; k < i; ++k) {
+				sum += L(i, k) * U(k, j);
+			}
+
+			U(i, j, A(i, j) - sum);
+		}
+
+		for (int j = i + 1; j < 3; ++j) {
+			T sum{};
+
+			for (int k = 0; k < i; ++k) {
+				sum += L(j, k) * U(k, i);
+			}
+
+			if (std::abs(U(i, i)) < 1e-6) {
+				throw std::runtime_error("LU decomposition failed");
+			}
+
+			L(j, i, (A(j, i) - sum) / U(i, i));
+		}
+	}
+
+	return { L, U };
+}
+
+template<typename T>
+Matrix<T> power(const Matrix<T>& A, int k) {
+	if (k < 0) {
+		throw std::runtime_error("Power must be non-negative");
+	}
+
+	Matrix<T> result(3, 3, 0, 0);
+
+	for (int i = 0; i < 3; ++i) {
+		result(i, i, T{ 1 });
+	}
+
+	for (int i = 0; i < k; ++i) {
+		result = result * A;
+	}
+
+	return result;
+}
 
 int main() {
 	try {
-		Matrix<int> A(3, 3, 1, 6);
-		Matrix<int> C(3, 5, 1, 9);
-		std::cout << A << "\n";
-		std::cout << C << "\n";
-		Matrix<int> D = A * C;
-		std::cout << D;
+		//1-2
+		{
+			Matrix<double> A(3, 3, { 2.0, 1.0, -1.0, -3.0, -1.0, 2.0, -2.0, 1.0, 2.0 });
+
+			Matrix<double> b(3, 1, { 8.0, -11.0, -3.0 });
+
+			Matrix<double> x = solve(A, b);
+			std::cout << "Task 1: ";
+			std::cout << "x:\n" << x << "\n";
+		}
+
+		//3
+		{
+			Matrix<double> a(1, 3, { 1.0, 2.0, 3.0 });
+			Matrix<double> b(1, 3, { 4.0, 5.0, 6.0 });
+			Matrix<double> c(1, 3, { 7.0, 8.0, 9.0 });
+			std::cout << "Task 3: ";
+			std::cout << std::boolalpha << areCoplanar(a, b, c) << std::endl;
+		}
+
+		//4
+		{
+			Matrix<double> A(3, 3, {2.0, 1.0, 1.0, 4.0, 3.0, 3.0, 8.0, 7.0, 9.0});
+
+			auto [L, U] = LU(A);
+			std::cout << "Task 4: ";
+			std::cout << "L:\n" << L;
+			std::cout << "U:\n" << U;
+			std::cout << "L * U:\n" << L * U;
+			std::cout << std::endl;
+		}
+		//5
+		{
+			Matrix<double> A(3, 3, {
+					1.0, 2.0, 0.0,
+					0.0, 1.0, 3.0,
+					0.0, 0.0, 1.0
+				});
+
+			Matrix<double> result = power(A, 3);
+
+			std::cout << "Task 5: " << "\n" << result;
+		}
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what();

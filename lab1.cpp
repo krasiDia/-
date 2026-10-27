@@ -28,7 +28,6 @@ template<typename T>
 class Matrix {
 	Array<T>* arrayMatrix = nullptr;
 	int row{}, col{};
-	static const float deff;
 public:
 	Matrix() = default;
 	Matrix(int row, int col, std::initializer_list<T> values): row(row), col(col){
@@ -132,7 +131,7 @@ public:
 		}
 		return os;
 	}
-	T operator()(int indexRow, int indexCol) const{
+	const T& operator()(int indexRow, int indexCol) const{
 		if (indexRow < 0 || indexRow >= this->row ||
 			indexCol < 0 || indexCol >= this->col) {
 			throw std::runtime_error("Incorrect index 1");
@@ -148,7 +147,7 @@ public:
 		}
 		return tmp->value;
 	}
-	void operator()(int indexRow, int indexCol, T mean){
+	T& operator()(int indexRow, int indexCol){
 		if (indexRow < 0 || indexRow >= this->row ||
 			indexCol < 0 || indexCol >= this->col) {
 			throw std::runtime_error("Incorrect index 2");
@@ -161,10 +160,10 @@ public:
 		for (int i = 0; i < position; ++i) {
 			tmp = tmp->next;
 		}
-		tmp->value = mean;
+		return tmp->value;
 	}
 
-	void operator+=(const Matrix<T>& other) {
+	Matrix<T>& operator+=(const Matrix<T>& other) {
 		if (this->row == other.row && this->col == other.col) {
 			Array<T>* tmp = this->arrayMatrix;
 			Array<T>* tmpOther = other.arrayMatrix;
@@ -173,18 +172,14 @@ public:
 				tmp = tmp->next;
 				tmpOther = tmpOther->next;
 			}
+			return (*this);
 		}
 		else {
 			throw std::runtime_error("The matrices have different sizes.");
 		}
 	}
-	friend Matrix<T> operator+(const Matrix<T>& m, const Matrix<T>& o) {
-		Matrix<T> tmp = m;
-		tmp += o;
-		return tmp;
-	}
 
-	void operator-=(const Matrix<T>& other) {
+	Matrix<T>& operator-=(const Matrix<T>& other) {
 		if (this->row == other.row && this->col == other.col) {
 			Array<T>* tmp = this->arrayMatrix;
 			Array<T>* tmpOther = other.arrayMatrix;
@@ -193,51 +188,58 @@ public:
 				tmp = tmp->next;
 				tmpOther = tmpOther->next;
 			}
+			return (*this);
 		}
 		else {
 			throw std::runtime_error("The matrices have different sizes.");
 		}
 	}
-	friend Matrix<T> operator-(const Matrix<T>& m, const Matrix<T>& o) {
-		Matrix<T> tmp = m;
-		tmp -= o;
-		return tmp;
-	}
 
-	void operator*=(const T& mean) {
+	Matrix<T>& operator*=(const T& value) {
 		Array<T>* tmp = this->arrayMatrix;
 		while (tmp) {
-			tmp->value *= mean;
+			tmp->value *= value;
 			tmp = tmp->next;
 		}
-	}
-	friend Matrix<T> operator*(const Matrix<T>& m, const T& mean) {
-		Matrix<T> ans = m;
-		ans *= mean;
-		return ans;
-	}
-	friend Matrix<T> operator*(const T& mean, const Matrix<T>& m) {
-		Matrix<T> ans = m;
-		ans *= mean;
-		return ans;
+		return (*this);
 	}
 
-	void operator/=(const T& mean) {
-		if (mean == T{}) {
+	Matrix<T>& operator/=(const T& value) {
+		if (value == T{}) {
 			throw std::runtime_error("Division by zero.");
 		}
 		Array<T>* tmp = this->arrayMatrix;
 		while (tmp) {
-			tmp->value /= mean;
+			tmp->value /= value;
 			tmp = tmp->next;
 		}
+		return (*this);
 	}
-	friend Matrix<T> operator/(const Matrix<T>& m, const T& mean) {
-		Matrix<T> ans = m;
-		ans /= mean;
+	//объявляем friend так как определяем свободные функции внутри класса
+	friend Matrix<T> operator+(const Matrix<T>& o) {
+		(*this) += o;
+		return (*this);
+	}
+	Matrix<T> operator-(const Matrix<T>& o) {
+		Matrix<T> tmp = (*this);
+		tmp -= o;
+		return tmp;
+	}
+	Matrix<T> operator/(const T& value) {
+		Matrix<T> ans = (*this);
+		ans /= value;
 		return ans;
 	}
-
+	Matrix<T> operator*(const T& value) {
+		Matrix<T> ans = *this;
+		ans *= value;
+		return ans;
+	}
+	friend Matrix<T> operator*(const T& value, const Matrix<T>& m) {
+		Matrix<T> ans = m;
+		ans *= value;
+		return ans;
+	}
 	T tr() const {
 		if (this->row == this->col) {
 			T result{};
@@ -259,7 +261,7 @@ public:
 					for (int j = 0; j < a.col; ++j) {
 						result += a(k,j) * other(j,i);
 					}
-					tmp(k, i, result);
+					tmp(k, i) = result;
 				}
 			}
 			return tmp;
@@ -276,6 +278,8 @@ public:
 		}
 	}
 };
+
+//__________________
 
 template<typename T>
 T determinant(const Matrix<T>& A) {
@@ -383,50 +387,57 @@ Matrix<T> power(const Matrix<T>& A, int k) {
 
 int main() {
 	try {
-		//1-2
-		{
-			Matrix<double> A(3, 3, { 2.0, 1.0, -1.0, -3.0, -1.0, 2.0, -2.0, 1.0, 2.0 });
+		Matrix<int> A(2, 2, { 1, 2, 3, 4 });
+		Matrix<int> B(2, 2, { 4, 5, 6, 7 });
+		auto C = 3 * A * 2;
+		auto D = A * B;
+		std::cout << C << "\n";
+		std::cout << D;
 
-			Matrix<double> b(3, 1, { 8.0, -11.0, -3.0 });
+		////1-2
+		//{
+		//	Matrix<double> A(3, 3, { 2.0, 1.0, -1.0, -3.0, -1.0, 2.0, -2.0, 1.0, 2.0 });
 
-			Matrix<double> x = solve(A, b);
-			std::cout << "Task 1: ";
-			std::cout << "x:\n" << x << "\n";
-		}
+		//	Matrix<double> b(3, 1, { 8.0, -11.0, -3.0 });
 
-		//3
-		{
-			Matrix<double> a(1, 3, { 1.0, 2.0, 3.0 });
-			Matrix<double> b(1, 3, { 4.0, 5.0, 6.0 });
-			Matrix<double> c(1, 3, { 7.0, 8.0, 9.0 });
-			std::cout << "Task 3: ";
-			std::cout << std::boolalpha << areCoplanar(a, b, c) << "\n";
-			std::cout << "\n";
-		}
+		//	Matrix<double> x = solve(A, b);
+		//	std::cout << "Task 1: ";
+		//	std::cout << "x:\n" << x << "\n";
+		//}
 
-		//4
-		{
-			Matrix<double> A(3, 3, {2.0, 1.0, 1.0, 4.0, 3.0, 3.0, 8.0, 7.0, 9.0});
+		////3
+		//{
+		//	Matrix<double> a(1, 3, { 1.0, 2.0, 3.0 });
+		//	Matrix<double> b(1, 3, { 4.0, 5.0, 6.0 });
+		//	Matrix<double> c(1, 3, { 7.0, 8.0, 9.0 });
+		//	std::cout << "Task 3: ";
+		//	std::cout << std::boolalpha << areCoplanar(a, b, c) << "\n";
+		//	std::cout << "\n";
+		//}
 
-			auto [L, U] = LU(A);
-			std::cout << "Task 4: ";
-			std::cout << "L:\n" << L;
-			std::cout << "U:\n" << U;
-			std::cout << "L * U:\n" << L * U;
-			std::cout << "\n";
-		}
-		//5
-		{
-			Matrix<double> A(3, 3, {
-					1.0, 2.0, 0.0,
-					0.0, 1.0, 3.0,
-					0.0, 0.0, 1.0
-				});
+		////4
+		//{
+		//	Matrix<double> A(3, 3, {2.0, 1.0, 1.0, 4.0, 3.0, 3.0, 8.0, 7.0, 9.0});
 
-			Matrix<double> result = power(A, 3);
+		//	auto [L, U] = LU(A);
+		//	std::cout << "Task 4: ";
+		//	std::cout << "L:\n" << L;
+		//	std::cout << "U:\n" << U;
+		//	std::cout << "L * U:\n" << L * U;
+		//	std::cout << "\n";
+		//}
+		////5
+		//{
+		//	Matrix<double> A(3, 3, {
+		//			1.0, 2.0, 0.0,
+		//			0.0, 1.0, 3.0,
+		//			0.0, 0.0, 1.0
+		//		});
 
-			std::cout << "Task 5: " << "\n" << result;
-		}
+		//	Matrix<double> result = power(A, 3);
+
+		//	std::cout << "Task 5: " << "\n" << result;
+		//}
 	}
 	catch (const std::exception& e) {
 		std::cerr << e.what();

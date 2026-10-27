@@ -36,18 +36,47 @@ public:
 			add(arrayMatrix, value);
 		}
 	}
-	//????
 	Matrix(int row, int col, int top, int bottom): row(row), col(col) {
 		std::random_device r;
 		std::default_random_engine e1(r());
-		std::uniform_int_distribution<int> uniform_dist(top, bottom);
-		std::vector<T> means;
-		for (int i = 0; i < row*col; i++) {
-			int mean = uniform_dist(e1);
-			means.push_back(mean);
+		if constexpr (std::is_integral_v<T>) {
+			std::uniform_int_distribution<int> dist(top, bottom);
+
+			for (int i = 0; i < row * col; ++i) {
+				add(arrayMatrix, static_cast<T>(dist(e1)));
+			}
 		}
-		for (int i = 0; i < row * col; i++) {
-			add(arrayMatrix, means[i]);
+		else if constexpr (std::is_floating_point_v<T>) {
+			std::uniform_real_distribution<T> dist(
+				static_cast<T>(top),
+				static_cast<T>(bottom)
+			);
+
+			for (int i = 0; i < row * col; ++i) {
+				add(arrayMatrix, dist(e1));
+			}
+		}
+		else if constexpr (std::is_same_v<T, std::complex<float>>) {
+			std::uniform_real_distribution<float> dist(
+				static_cast<float>(top),
+				static_cast<float>(bottom)
+			);
+
+			for (int i = 0; i < row * col; ++i) {
+				T value(dist(e1), dist(e1));
+				add(arrayMatrix, value);
+			}
+		}
+		else if constexpr (std::is_same_v < T, std::complex<double>>) {
+			std::uniform_real_distribution<double> dist(
+				static_cast<double>(top),
+				static_cast<double>(bottom)
+			);
+
+			for (int i = 0; i < row * col; ++i) {
+				T value(dist(e1), dist(e1));
+				add(arrayMatrix, value);
+			}
 		}
 	}
 	Matrix(const Matrix& m) : row(m.row), col(m.col) {
@@ -64,13 +93,25 @@ public:
 			return *this;
 	}
 
-	//???
 	bool operator==(const Matrix& m) const{
 		Array<T>* tmp = this->arrayMatrix;
 		Array<T>* tmpOther = m.arrayMatrix;
 		while (tmp && tmpOther) {
-			if (tmp->value != tmpOther->value) {
-				return false;
+			if constexpr (std::is_integral_v<T>) {
+				if (tmp->value != tmpOther->value) {
+					return false;
+				}
+			}
+			else if constexpr (
+				std::is_floating_point_v<T> ||
+				std::is_same_v<T, std::complex<float>> ||
+				std::is_same_v<T, std::complex<double>>
+				) {
+				double eps = 1e-6;
+
+				if (std::abs(tmp->value - tmpOther->value) > eps) {
+					return false;
+				}
 			}
 			tmp = tmp->next;
 			tmpOther = tmpOther->next;
@@ -236,9 +277,6 @@ public:
 	}
 };
 
-
-const float Matrix<float>::deff = 0.000001f; //придумать как сделать частичную специализацию для оператора
-
 template<typename T>
 T determinant(const Matrix<T>& A) {
 	return A(0, 0) * (A(1, 1) * A(2, 2) - A(1, 2) * A(2, 1))
@@ -295,9 +333,10 @@ std::pair<Matrix<T>, Matrix<T>> LU(const Matrix<T>& A) {
 	for (int i = 0; i < 3; ++i) {
 		L(i, i, T{ 1 });
 
+		//столбцы
 		for (int j = i; j < 3; ++j) {
 			T sum{};
-
+			//строки
 			for (int k = 0; k < i; ++k) {
 				sum += L(i, k) * U(k, j);
 			}
@@ -361,7 +400,8 @@ int main() {
 			Matrix<double> b(1, 3, { 4.0, 5.0, 6.0 });
 			Matrix<double> c(1, 3, { 7.0, 8.0, 9.0 });
 			std::cout << "Task 3: ";
-			std::cout << std::boolalpha << areCoplanar(a, b, c) << std::endl;
+			std::cout << std::boolalpha << areCoplanar(a, b, c) << "\n";
+			std::cout << "\n";
 		}
 
 		//4
@@ -373,7 +413,7 @@ int main() {
 			std::cout << "L:\n" << L;
 			std::cout << "U:\n" << U;
 			std::cout << "L * U:\n" << L * U;
-			std::cout << std::endl;
+			std::cout << "\n";
 		}
 		//5
 		{

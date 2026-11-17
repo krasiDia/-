@@ -215,8 +215,7 @@ public:
 		}
 		return (*this);
 	}
-	//объявляем friend так как определяем свободные функции внутри класса
-	friend Matrix<T> operator+(const Matrix<T>& o) {
+	Matrix<T> operator+(const Matrix<T>& o) {
 		(*this) += o;
 		return (*this);
 	}
@@ -235,6 +234,7 @@ public:
 		ans *= value;
 		return ans;
 	}
+//этот оператор оставляем friend так как он должен принимать 2 параметра для поддержания коммпланарности  
 	friend Matrix<T> operator*(const T& value, const Matrix<T>& m) {
 		Matrix<T> ans = m;
 		ans *= value;
@@ -252,6 +252,7 @@ public:
 			throw std::runtime_error("The matrix must be square");
 		}
 	}
+//этот метод тоже можно переписать без friend 
 	friend Matrix<T> operator*(const Matrix<T>& a, const Matrix<T>& other) {
 		if (a.col == other.row) {
 			Matrix<T> tmp(a.row, other.col, 0, 0);

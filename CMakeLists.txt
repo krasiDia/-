@@ -14,3 +14,4 @@ set(CMAKE_CXX_MODULE_STD ON)
 find_package(OpenMP REQUIRED)
 
 add_executable(lab1 lab1.cpp)
+add_executable(lab2 lab2.cpp)

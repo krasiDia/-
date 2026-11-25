@@ -233,8 +233,15 @@ class LinkedList {
 
 		friend std::ostream& operator<<(std::ostream& os, const LinkedList& m) {
 			Node<T>* tmp = m.head;
+			int count = 0;
 			while (tmp) {
-				os << tmp->value << " ";
+				count++;
+				if (count % 3 == 0) {
+					os << tmp->value << " ";
+				}
+				else {
+					os << tmp->value << "";
+				}
 				tmp = tmp->next;
 			}
 			return os;
@@ -270,7 +277,6 @@ class LinkedList {
 			}
 		}
 
-
 		~LinkedList() {
 			while (head) {
 				Node<T>* tmp = head;
@@ -279,19 +285,92 @@ class LinkedList {
 			}
 		}
 
+		int size() const{
+			Node<T>* tmp = head;
+			int count = 0;
+			while (tmp) {
+				tmp = tmp->next;
+				count++;
+			}
+			return count;
+		}
+
+
+		LinkedList& reverse() {
+			Node<T>* tmp = head;
+			Node<T>* new_head = nullptr;
+
+			while (tmp) {
+				Node<T>* next = tmp->next; 
+
+				std::swap(tmp->next, tmp->prev); 
+
+				new_head = tmp; 
+				tmp = next; 
+			}
+
+			head = new_head;
+			return *this;
+		}
+
+
+		LinkedList operator+(LinkedList<int>& B) {
+			if ((*this).size() < B.size()) {
+				while ((*this).size() < B.size()) {
+					(*this).push_head(0);
+				}
+			}
+			if ((*this).size() > B.size()) {
+				while ((*this).size() < B.size()) {
+					B.push_head(0);
+				}
+			}
+			LinkedList<int> res;
+			int surplus = 0;
+			for (int i = B.size() - 1; i > -1 ; --i) {
+				int summand = ((*this)[i] + B[i] + surplus) % 10;
+				surplus = ((*this)[i] + B[i] + surplus) / 10;
+				res.push_tail(summand);
+			}
+			return res.reverse();
+		}
+
+		LinkedList operator*(const LinkedList<int>& B) {
+			LinkedList<int> res;
+			for (int i = B.size() - 1; i > -1; --i) {
+				int surplus = 0;
+				LinkedList<int> resSummand;
+				for (int j = B.size() - 1; j > -1; --j) {
+					int summand = (((*this)[j] * B[i]) + surplus) % 10;
+					surplus = (((*this)[j] * B[i]) + surplus) / 10;
+					resSummand.push_tail(summand);
+				}
+				resSummand.push_tail(surplus);
+
+				for (int k = 0; k < (B.size() - 1) - i; ++k) {
+					resSummand.push_head(0);
+				}
+				res = res + resSummand.reverse();
+			}
+			return res;
+		}
+
+
+
 };
 
 int main() {
-	LinkedList<int> A({ 1, 2, 3 });
-	LinkedList<int> B(4, 1, 10);
-	LinkedList<int> C({2,3,1});
-	LinkedList<int> D;
-	D = B;
-	D.push_tail(174).push_tail(A).push_head(123);
-	A.push_head(B).pop_head().pop_tail();
-	C.delete_node(1);
-	std::cout << B << "\n" << D << "\n" << A << "\n" << C << "\n";
-	C[0] = 4;
-	int value = C[0];
+
+	//2. Сложить и умножить два числа, представленных в виде списков.
+	// Числа не содержат ведущих нулей, кроме самого числа 0. 
+	// Проверить ответ на числах, превышающих максимальное значение int.
+	// Реализовать оператор вывода на печать так, чтобы он демонстрировал корректность выполненных операций.
+
+	LinkedList<int> A({ 3,5,7, 1,2,1, 5,9,4 });
+	LinkedList<int> B({ 5,8,5, 7,6,9, 0,2,1 });
+	LinkedList<int> C = A + B;
+	LinkedList<int> D = A * B;
 	std::cout << C;
+	std::cout << "\n";
+	std::cout << D;
 }

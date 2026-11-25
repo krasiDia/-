@@ -109,19 +109,19 @@ class LinkedList {
 			}
 		}
 
-		bool push_tail(T value) {
+		LinkedList& push_tail(T value) {
 			Node<T>* tmp = head;
 			Node<T>* newEl = new Node<T>(value);
 			if (!head) {
 				head = newEl;
-				return 0;
+				return *this;
 			}
 			while (tmp->next) {
 				tmp = tmp->next;
 			}
 			tmp->next = newEl;
 			newEl->prev = tmp;
-			return 0;
+			return *this;
 		}
 
 
@@ -144,19 +144,19 @@ class LinkedList {
 			return *this;
 		}
 
-		bool push_head(T value) {
+		LinkedList& push_head(T value) {
 			Node<T>* newEl = new Node<T>(value);
 
 			if (!head) {
 				head = newEl;
-				return 0;
+				return *this;
 			}
 			
 			head->prev = newEl;
 			newEl->next = head;
 
 			head = newEl; 
-			return 0;
+			return *this;
 		}
 
 		LinkedList& push_head(LinkedList other) {
@@ -173,6 +173,63 @@ class LinkedList {
 			return *this;
 		}
 
+		LinkedList& pop_head() {
+			if (!head) { return *this; }
+			if (!head->next) {
+				delete head;
+				head = nullptr;
+				return *this;
+			}
+			Node<T>* tmp = head;
+			head = head->next;
+
+			delete tmp;
+			return *this;
+		}
+
+		LinkedList& pop_tail() {
+			if (!head) { return *this; }
+			if (!head->next) {
+				delete head;
+				head = nullptr;
+				return *this;
+			}
+			Node<T>* tmp = head;
+			while (tmp && tmp->next && tmp->next->next) {
+				tmp = tmp->next;
+			}
+			Node<T>* tail = tmp->next;
+			tmp->next = nullptr;
+			delete tail;
+			return *this;
+		}
+
+		LinkedList& delete_node(T value) {
+			Node<T>* tmp = head;
+
+			while (tmp) {
+				Node<T>* next = tmp->next;
+
+				if (tmp->value == value) {
+					if (tmp->prev) {
+						tmp->prev->next = tmp->next;
+					}
+					else {
+						head = tmp->next; 
+					}
+
+					if (tmp->next) {
+						tmp->next->prev = tmp->prev;
+					}
+
+					delete tmp;
+				}
+
+				tmp = next;
+			}
+
+			return *this;
+		}
 
 		friend std::ostream& operator<<(std::ostream& os, const LinkedList& m) {
 			Node<T>* tmp = m.head;
@@ -188,6 +245,32 @@ class LinkedList {
 			return *this;
 		}
 
+
+		const T& operator[](size_t index) const {
+			Node<T>* tmp = head;
+			size_t count = 0;
+			while (tmp) {
+				if (count == index) {
+					return (tmp->value);
+				}
+				tmp = tmp->next;
+				count++;
+			}
+		}
+
+		T& operator[](size_t index) {
+			Node<T>* tmp = head;
+			size_t count = 0;
+			while (tmp) {
+				if (count == index) {
+					return (tmp->value);
+				}
+				tmp = tmp->next;
+				count++;
+			}
+		}
+
+
 		~LinkedList() {
 			while (head) {
 				Node<T>* tmp = head;
@@ -201,12 +284,14 @@ class LinkedList {
 int main() {
 	LinkedList<int> A({ 1, 2, 3 });
 	LinkedList<int> B(4, 1, 10);
-	LinkedList<int> C(A);
+	LinkedList<int> C({2,3,1});
 	LinkedList<int> D;
 	D = B;
-	D.push_tail(174);
-	D.push_tail(A);
-	D.push_head(123);
-	A.push_head(B);
-	std::cout << B << "\n" << D << "\n" << A;
+	D.push_tail(174).push_tail(A).push_head(123);
+	A.push_head(B).pop_head().pop_tail();
+	C.delete_node(1);
+	std::cout << B << "\n" << D << "\n" << A << "\n" << C << "\n";
+	C[0] = 4;
+	int value = C[0];
+	std::cout << C;
 }
